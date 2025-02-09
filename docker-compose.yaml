@@ -1,0 +1,33 @@
+version: "3.8"
+
+services:
+  postgresdb:
+    platform: linux/x86_64
+    image: postgres:15
+    restart: unless-stopped
+    env_file: ./.env
+    environment:
+      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+    ports:
+      - "${DB_LOCAL_PORT}:${DB_DOCKER_PORT}"
+  app:
+    depends_on:
+      - postgresdb
+    restart: on-failure
+    image: car-sharing-service
+    build: .
+    env_file: ./.env
+    ports:
+      - "${SPRING_LOCAL_PORT}:${SPRING_DOCKER_PORT}"
+      - "${DEBUG_PORT}:${DEBUG_PORT}"
+    environment:
+      SPRING_APPLICATION_JSON: '{
+      
+        "spring.datasource.url": "url=jdbc:h2:mem:testdb:${DB_DOCKER_PORT}/${DB_NAME}",
+        "spring.datasource.username": "${DB_USERNAME}",
+        "spring.datasource.password": "${DB_PASSWORD}",
+        "spring.jpa.properties.hibernate.dialect": "org.hibernate.dialect.H2Dialect"
+      }'
+      JAVA_TOOL_OPTIONS: "-agentlib:jdwp=transport=dt_socket,server=y,suspend=n,address=*:5005"
